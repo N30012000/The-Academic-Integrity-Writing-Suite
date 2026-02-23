@@ -373,10 +373,12 @@ import random
 from typing import Optional
 
 try:
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types as genai_types
     GEMINI_AVAILABLE = True
 except ImportError:
     genai = None  # type: ignore
+    genai_types = None  # type: ignore
     GEMINI_AVAILABLE = False
 
 try:
@@ -418,32 +420,33 @@ init_session()
 # CORE MODULE FUNCTIONS
 # ══════════════════════════════════════════════════════════════════════════════
 
-def get_gemini_model(model_name: str = "gemini-1.5-flash"):
-    """Configure and return a Gemini GenerativeModel."""
+def get_gemini_client():
+    """Configure and return a Gemini client."""
     if not GEMINI_AVAILABLE or genai is None:
         return None
     key = st.session_state.get("api_key", "") or os.environ.get("GEMINI_API_KEY", "")
     if not key:
         return None
     try:
-        genai.configure(api_key=key)
-        return genai.GenerativeModel(model_name)
+        return genai.Client(api_key=key)
     except Exception:
         return None
 
 def call_llm(system_prompt: str, user_prompt: str, max_tokens: int = 2048) -> str:
     """Unified LLM call via Google Gemini with error handling."""
     if not GEMINI_AVAILABLE:
-        return "⚠️ The `google-generativeai` package is not installed. Run: pip install google-generativeai"
-    model_name = st.session_state.get("gemini_model", "gemini-1.5-flash")
-    model = get_gemini_model(model_name)
-    if not model:
+        return "⚠️ The `google-genai` package is not installed. Run: pip install google-genai"
+    client = get_gemini_client()
+    if not client:
         return "⚠️ API key not configured. Get a free key at aistudio.google.com and paste it in the sidebar."
+    model_name = st.session_state.get("gemini_model", "gemini-2.0-flash")
     try:
-        full_prompt = f"{system_prompt}\n\n{user_prompt}"
-        response = model.generate_content(
-            full_prompt,
-            generation_config=genai.GenerationConfig(max_output_tokens=max_tokens),
+        response = client.models.generate_content(
+            model=model_name,
+            contents=f"{system_prompt}\n\n{user_prompt}",
+            config=genai_types.GenerateContentConfig(
+                max_output_tokens=max_tokens,
+            ),
         )
         return response.text
     except Exception as e:
@@ -786,17 +789,18 @@ with st.sidebar:
     st.markdown("**Model**")
     model_choice = st.selectbox(
         "Gemini model",
-        options=["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"],
+        options=["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-pro"],
         index=0,
-        help="flash = fastest & free. pro = smarter but slower. 2.0-flash = experimental.",
+        help="gemini-2.0-flash is the recommended free default.",
         label_visibility="collapsed",
     )
     st.session_state.gemini_model = model_choice
 
     model_notes = {
-        "gemini-1.5-flash": "⚡ Fast · 1,500 req/day free",
-        "gemini-1.5-pro":   "🧠 Smarter · 50 req/day free",
-        "gemini-2.0-flash-exp": "🧪 Experimental · Free tier",
+        "gemini-2.0-flash":      "⚡ Recommended · Fast · Free",
+        "gemini-2.0-flash-lite": "🪶 Lightest · Fastest · Free",
+        "gemini-1.5-flash":      "⚡ Stable · 1,500 req/day free",
+        "gemini-1.5-pro":        "🧠 Smarter · 50 req/day free",
     }
     st.markdown(
         f'<div style="font-family:IBM Plex Mono,monospace;font-size:0.7rem;color:#5A6480;margin-top:4px">{model_notes.get(model_choice,"")}</div>',
