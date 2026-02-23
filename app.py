@@ -20,24 +20,27 @@ st.set_page_config(
 
 # ─── Custom CSS ───────────────────────────────────────────────────────────────
 st.markdown("""
-/* ── Updated Light Mode Variables ── */
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+/* ── Root Variables ── */
 :root {
-    --bg-primary:    #F8FAFC;  /* Light slate background */
-    --bg-secondary:  #FFFFFF;  /* Pure white sidebar/panels */
-    --bg-card:       #FFFFFF;  /* White cards */
-    --bg-elevated:   #F1F5F9;  /* Light gray inputs */
-    --accent-gold:   #D97706;  /* Deeper gold for readability on white */
-    --accent-teal:   #0D9488;  /* Deeper teal */
-    --accent-red:    #DC2626;  /* Deeper red */
-    --accent-purple: #7C3AED;  /* Deeper purple */
-    --text-primary:  #0F172A;  /* Dark slate text */
-    --text-secondary:#475569;  /* Medium slate text */
-    --text-muted:    #94A3B8;  /* Light slate text */
-    --border:        #E2E8F0;  /* Subtle light border */
-    --border-accent: #CBD5E1;  /* More defined border on hover */
+    --bg-primary:    #0A0D14;
+    --bg-secondary:  #10141F;
+    --bg-card:       #141824;
+    --bg-elevated:   #1C2235;
+    --accent-gold:   #E8B84B;
+    --accent-teal:   #2DD4BF;
+    --accent-red:    #F87171;
+    --accent-purple: #A78BFA;
+    --text-primary:  #F0F2F8;
+    --text-secondary:#9AA3B8;
+    --text-muted:    #5A6480;
+    --border:        #1E2640;
+    --border-accent: #2A3255;
 }
 
-/* ── Global Reset for Light Mode ── */
+/* ── Global Reset ── */
 html, body, [class*="css"] {
     font-family: 'Outfit', sans-serif;
     background-color: var(--bg-primary);
@@ -45,27 +48,22 @@ html, body, [class*="css"] {
 }
 
 .stApp {
-    background: radial-gradient(ellipse at 20% 0%, #FFFFFF 0%, var(--bg-primary) 60%);
+    background: radial-gradient(ellipse at 20% 0%, #0F1628 0%, var(--bg-primary) 60%);
 }
 
-/* Update Sidebar for Light Mode */
+/* ── Hide Streamlit Branding ── */
+#MainMenu, footer, header { visibility: hidden; }
+.stDeployButton { display: none; }
+
+/* ── Sidebar ── */
 [data-testid="stSidebar"] {
     background: var(--bg-secondary) !important;
     border-right: 1px solid var(--border) !important;
 }
-
-/* Update Inputs for better contrast */
-.stTextArea textarea,
-.stTextInput input {
-    background: #FFFFFF !important;
-    border: 1px solid var(--border) !important;
-    color: var(--text-primary) !important;
-}
-
-/* Ensure secondary panels (like diff view) are distinguishable */
-.diff-panel {
-    background: #F8FAFC !important;
-    border: 1px solid var(--border) !important;
+[data-testid="stSidebar"] .stMarkdown h1,
+[data-testid="stSidebar"] .stMarkdown h2,
+[data-testid="stSidebar"] .stMarkdown h3 {
+    color: var(--accent-gold);
 }
 
 /* ── App Header ── */
