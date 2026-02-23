@@ -373,11 +373,11 @@ import random
 from typing import Optional
 
 try:
-    from anthropic import Anthropic as _AnthropicClient
-    ANTHROPIC_AVAILABLE = True
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
 except ImportError:
-    _AnthropicClient = None  # type: ignore
-    ANTHROPIC_AVAILABLE = False
+    genai = None  # type: ignore
+    GEMINI_AVAILABLE = False
 
 try:
     import PyPDF2
@@ -401,6 +401,7 @@ except ImportError:
 def init_session():
     defaults = {
         "api_key": "",
+        "gemini_model": "gemini-1.5-flash",
         "rag_chunks": [],
         "rag_filenames": [],
         "version_history": [],
@@ -417,35 +418,36 @@ init_session()
 # CORE MODULE FUNCTIONS
 # ══════════════════════════════════════════════════════════════════════════════
 
-def get_anthropic_client():
-    """Return Anthropic client using stored API key."""
-    if not ANTHROPIC_AVAILABLE or _AnthropicClient is None:
+def get_gemini_model(model_name: str = "gemini-1.5-flash"):
+    """Configure and return a Gemini GenerativeModel."""
+    if not GEMINI_AVAILABLE or genai is None:
         return None
-    key = st.session_state.get("api_key", "") or os.environ.get("ANTHROPIC_API_KEY", "")
+    key = st.session_state.get("api_key", "") or os.environ.get("GEMINI_API_KEY", "")
     if not key:
         return None
     try:
-        return _AnthropicClient(api_key=key)
+        genai.configure(api_key=key)
+        return genai.GenerativeModel(model_name)
     except Exception:
         return None
 
 def call_llm(system_prompt: str, user_prompt: str, max_tokens: int = 2048) -> str:
-    """Unified LLM call with error handling."""
-    if not ANTHROPIC_AVAILABLE:
-        return "⚠️ The `anthropic` package is not installed. Run: pip install anthropic"
-    client = get_anthropic_client()
-    if not client:
-        return "⚠️ API key not configured. Please add your Anthropic API key in the sidebar."
+    """Unified LLM call via Google Gemini with error handling."""
+    if not GEMINI_AVAILABLE:
+        return "⚠️ The `google-generativeai` package is not installed. Run: pip install google-generativeai"
+    model_name = st.session_state.get("gemini_model", "gemini-1.5-flash")
+    model = get_gemini_model(model_name)
+    if not model:
+        return "⚠️ API key not configured. Get a free key at aistudio.google.com and paste it in the sidebar."
     try:
-        message = client.messages.create(
-            model="claude-opus-4-6",
-            max_tokens=max_tokens,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
+        full_prompt = f"{system_prompt}\n\n{user_prompt}"
+        response = model.generate_content(
+            full_prompt,
+            generation_config=genai.GenerationConfig(max_output_tokens=max_tokens),
         )
-        return message.content[0].text
+        return response.text
     except Exception as e:
-        return f"⚠️ API Error: {str(e)}"
+        return f"⚠️ Gemini API Error: {str(e)}"
 
 # ── 1. Document Parsing ────────────────────────────────────────────────────────
 def parse_pdf(file_bytes: bytes) -> str:
@@ -755,13 +757,20 @@ def module_header(icon: str, icon_class: str, title: str, desc: str):
 
 with st.sidebar:
     st.markdown("### ⚙️ Configuration")
-    
+
+    st.markdown("""
+    <div style="background:rgba(45,212,191,0.08);border:1px solid rgba(45,212,191,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:0.78rem;color:#2DD4BF;">
+        🆓 <strong>100% Free</strong> — Powered by Google Gemini.<br>
+        <span style="color:#9AA3B8">Get your free key at <a href="https://aistudio.google.com" target="_blank" style="color:#2DD4BF">aistudio.google.com</a></span>
+    </div>
+    """, unsafe_allow_html=True)
+
     api_key_input = st.text_input(
-        "Anthropic API Key",
+        "Gemini API Key",
         value=st.session_state.api_key,
         type="password",
-        placeholder="sk-ant-...",
-        help="Your Claude API key from console.anthropic.com"
+        placeholder="AIza...",
+        help="Free API key from Google AI Studio — no credit card required."
     )
     if api_key_input != st.session_state.api_key:
         st.session_state.api_key = api_key_input
@@ -771,6 +780,26 @@ with st.sidebar:
     status_text = "Connected" if key_set else "Not configured"
     st.markdown(
         f'<div style="font-size:0.78rem;font-family:IBM Plex Mono,monospace;color:{status_color}">● {status_text}</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown("**Model**")
+    model_choice = st.selectbox(
+        "Gemini model",
+        options=["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"],
+        index=0,
+        help="flash = fastest & free. pro = smarter but slower. 2.0-flash = experimental.",
+        label_visibility="collapsed",
+    )
+    st.session_state.gemini_model = model_choice
+
+    model_notes = {
+        "gemini-1.5-flash": "⚡ Fast · 1,500 req/day free",
+        "gemini-1.5-pro":   "🧠 Smarter · 50 req/day free",
+        "gemini-2.0-flash-exp": "🧪 Experimental · Free tier",
+    }
+    st.markdown(
+        f'<div style="font-family:IBM Plex Mono,monospace;font-size:0.7rem;color:#5A6480;margin-top:4px">{model_notes.get(model_choice,"")}</div>',
         unsafe_allow_html=True
     )
 
@@ -828,7 +857,7 @@ st.markdown("""
 <div class="app-header">
     <div>
         <h1 class="app-title">Academic <span>Integrity</span> & Writing Suite</h1>
-        <div class="app-subtitle">✦ Powered by Claude · RAG-Enhanced · Version Tracked ✦</div>
+        <div class="app-subtitle">✦ Powered by Google Gemini · Free Tier · RAG-Enhanced · Version Tracked ✦</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
