@@ -373,9 +373,10 @@ import random
 from typing import Optional
 
 try:
-    import anthropic
+    from anthropic import Anthropic as _AnthropicClient
     ANTHROPIC_AVAILABLE = True
 except ImportError:
+    _AnthropicClient = None  # type: ignore
     ANTHROPIC_AVAILABLE = False
 
 try:
@@ -418,13 +419,20 @@ init_session()
 
 def get_anthropic_client():
     """Return Anthropic client using stored API key."""
-    key = st.session_state.api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+    if not ANTHROPIC_AVAILABLE or _AnthropicClient is None:
+        return None
+    key = st.session_state.get("api_key", "") or os.environ.get("ANTHROPIC_API_KEY", "")
     if not key:
         return None
-    return anthropic.Anthropic(api_key=key)
+    try:
+        return _AnthropicClient(api_key=key)
+    except Exception:
+        return None
 
 def call_llm(system_prompt: str, user_prompt: str, max_tokens: int = 2048) -> str:
     """Unified LLM call with error handling."""
+    if not ANTHROPIC_AVAILABLE:
+        return "⚠️ The `anthropic` package is not installed. Run: pip install anthropic"
     client = get_anthropic_client()
     if not client:
         return "⚠️ API key not configured. Please add your Anthropic API key in the sidebar."
